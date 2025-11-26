@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "functions": {
+    "api/update-ymm.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/update-ymm",
+      "dest": "/api/update-ymm.js"
+    }
+  ]
+}
