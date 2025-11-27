@@ -1,28 +1,29 @@
 // /api/update-ymm.js
-import { kv } from '@vercel/kv';
+import { Redis } from '@upstash/redis';
 
-export const config = {
-  runtime: 'edge', // 适合 webhook，延迟最低
-};
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+});
 
-export default async function handler(request) {
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Only POST allowed' });
+  }
+
   try {
-    const body = await request.json();
+    const body = req.body;
 
-    // Webhook 必须传的字段
     const { brand, model, year } = body;
 
     if (!brand || !model || !year) {
-      return new Response(
-        JSON.stringify({ error: 'Missing brand/model/year' }),
-        { status: 400 }
-      );
+      return res.status(400).json({
+        error: 'Missing brand/model/year',
+      });
     }
 
-    // Redis key：每个 brand-model-year 唯一
     const key = `ymm:${brand}:${model}:${year}`;
 
-    // 存储对象（你可以加更多字段）
     const data = {
       brand,
       model,
@@ -30,26 +31,19 @@ export default async function handler(request) {
       updatedAt: Date.now(),
     };
 
-    await kv.set(key, data);
+    await redis.set(key, data);
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: 'YMM updated successfully',
-        redisKey: key,
-      }),
-      { status: 200 }
-    );
+    return res.status(200).json({
+      success: true,
+      message: 'YMM updated',
+      key,
+    });
+
   } catch (error) {
-    return new Response(
-      JSON.stringify({
-        error: 'Invalid JSON or server error',
-        details: error.toString(),
-      }),
-      { status: 500 }
-    );
+    return res.status(500).json({
+      error: error.toString(),
+    });
   }
 }
-
 
 
