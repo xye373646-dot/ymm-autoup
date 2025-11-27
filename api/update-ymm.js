@@ -1,15 +1,20 @@
 // /api/update-ymm.js
-import { kv } from '@vercel/kv';
+import { Redis } from '@upstash/redis';
 
 export const config = {
-  runtime: 'edge', // 适合 webhook，延迟最低
+  runtime: 'edge',
 };
+
+// 初始化 Upstash Redis（使用你的环境变量）
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+});
 
 export default async function handler(request) {
   try {
     const body = await request.json();
 
-    // Webhook 必须传的字段
     const { brand, model, year } = body;
 
     if (!brand || !model || !year) {
@@ -19,10 +24,8 @@ export default async function handler(request) {
       );
     }
 
-    // Redis key：每个 brand-model-year 唯一
     const key = `ymm:${brand}:${model}:${year}`;
 
-    // 存储对象（你可以加更多字段）
     const data = {
       brand,
       model,
@@ -30,7 +33,7 @@ export default async function handler(request) {
       updatedAt: Date.now(),
     };
 
-    await kv.set(key, data);
+    await redis.set(key, data);
 
     return new Response(
       JSON.stringify({
@@ -40,12 +43,9 @@ export default async function handler(request) {
       }),
       { status: 200 }
     );
-  } catch (error) {
+  } catch (err) {
     return new Response(
-      JSON.stringify({
-        error: 'Invalid JSON or server error',
-        details: error.toString(),
-      }),
+      JSON.stringify({ error: err.toString() }),
       { status: 500 }
     );
   }
