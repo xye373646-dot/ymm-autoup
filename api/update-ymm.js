@@ -1,36 +1,54 @@
-import { kv } from "@vercel/kv";
+// /api/update-ymm.js
+import { kv } from '@vercel/kv';
 
-export default async function handler(req, res) {
+export const config = {
+  runtime: 'edge', // 适合 webhook，延迟最低
+};
+
+export default async function handler(request) {
   try {
-    const { handle, title, description } = req.body;
+    const body = await request.json();
 
-    if (!handle || !title) {
-      return res.status(400).json({ error: "Missing required fields" });
+    // Webhook 必须传的字段
+    const { brand, model, year } = body;
+
+    if (!brand || !model || !year) {
+      return new Response(
+        JSON.stringify({ error: 'Missing brand/model/year' }),
+        { status: 400 }
+      );
     }
 
-    // 读取现有数据
-    const ymmData = (await kv.get("ymm")) || [];
+    // Redis key：每个 brand-model-year 唯一
+    const key = `ymm:${brand}:${model}:${year}`;
 
-    const match = `${title} ${description}`.match(/\b(19|20)\d{2}\b/g) || [];
+    // 存储对象（你可以加更多字段）
+    const data = {
+      brand,
+      model,
+      year,
+      updatedAt: Date.now(),
+    };
 
-    const added = [];
+    await kv.set(key, data);
 
-    match.forEach((year) => {
-      added.push({
-        year,
-        handle,
-      });
-    });
-
-    // 添加新数据
-    await kv.set("ymm", [...ymmData, ...added]);
-
-    return res.json({
-      success: true,
-      added,
-    });
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: 'YMM updated successfully',
+        redisKey: key,
+      }),
+      { status: 200 }
+    );
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return new Response(
+      JSON.stringify({
+        error: 'Invalid JSON or server error',
+        details: error.toString(),
+      }),
+      { status: 500 }
+    );
   }
 }
+
 
