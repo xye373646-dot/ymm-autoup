@@ -1,49 +1,22 @@
-// /api/update-ymm.js
-import { Redis } from '@upstash/redis';
-
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN,
-});
-
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Only POST allowed' });
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
-  try {
-    const body = req.body;
+  console.log("🚗 YMM Update triggered");
 
-    const { brand, model, year } = body;
+  const data = req.body;
 
-    if (!brand || !model || !year) {
-      return res.status(400).json({
-        error: 'Missing brand/model/year',
-      });
-    }
+  // ▼ 你可以在这里写入你自己的 YMM 更新逻辑
+  console.log("🔧 Received product payload:", data);
 
-    const key = `ymm:${brand}:${model}:${year}`;
+  // TODO: 将数据写入数据库 / Google Sheet / JSON 文件等
 
-    const data = {
-      brand,
-      model,
-      year,
-      updatedAt: Date.now(),
-    };
-
-    await redis.set(key, data);
-
-    return res.status(200).json({
-      success: true,
-      message: 'YMM updated',
-      key,
-    });
-
-  } catch (error) {
-    return res.status(500).json({
-      error: error.toString(),
-    });
-  }
+  return res.status(200).json({
+    success: true,
+    message: "YMM updated successfully",
+    received: data
+  });
 }
 
 
