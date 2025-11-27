@@ -5,6 +5,8 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
+  console.log("📬 Product Updated Webhook Received");
+
   const product = req.body;
 
   const payload = {
@@ -14,11 +16,17 @@ export default async function handler(req, res) {
     description: product.body_html
   };
 
-  await fetch(`${process.env.MY_YMM_API}/api/update-ymm`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
+  try {
+    await fetch(`${process.env.MY_YMM_API}/api/update-ymm`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
 
-  return res.status(200).json({ success: true, message: "Product update processed." });
+    console.log("✅ YMM updated for product update");
+  } catch (err) {
+    console.error("❌ Update YMM failed:", err);
+  }
+
+  return res.status(200).json({ success: true });
 }
